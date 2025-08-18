@@ -38,16 +38,18 @@ class MLP ():
     def ReLU (self, x):
         x = np.asarray(x)
         return np.maximum(0, x)
-    """
+
     def _get_normalized_logits_with_softmax_denom(self, logits):
         logits = logits - np.max(logits)
         exp_logits = np.exp(logits)
         softmax_denominator = np.sum(exp_logits)
         return exp_logits / softmax_denominator, softmax_denominator
+
     """
     def _get_normalized_logits_with_softmax_denom(self, logits):
         softmax_denominator = np.sum(np.exp(logits))
         return np.exp(logits) / softmax_denominator, softmax_denominator
+    """
 
     def forward(self, inputs, target_value=None, requires_grad=False):
         hidden_layer_activations = []
@@ -205,6 +207,59 @@ def train_model_with_SGD (model,
     return model, train_loss_history, val_loss_history
 
 
+def grid_search(hyperparameters: dict,
+                train_set: list,
+                validation_set: list,
+                n_epochs: int):
+    best_loss = float("inf")
+    best_params = {}
+    best_model = None
+
+    # extract hyperparameter combinations
+    learning_rate = hyperparameters.get('lr', [])
+    lr_multipliers = hyperparameters.get('lr_multiplier', [])
+    hidden_dims = hyperparameters.get('hidden_dim', [])
+    n_layers_list = hyperparameters.get('n_layers', [])
+
+    # iterate over all combinations
+    for lr in learning_rate:
+        for lr_multiplier in lr_multipliers:
+            for hidden_dim in hidden_dims:
+                for n_layers in n_layers_list:
+                    print(f"Testing: lr={lr}, lr_multiplier={lr_multiplier}, "
+                          f"hidden_dim={hidden_dim}, n_layers={n_layers}")
+
+                    # create a new model for each combination
+                    model = MLP(n_layers=n_layers, hidden_dim=hidden_dim)
+
+                    # train the model and track validation loss history
+                    _, _, val_loss_history = train_model_with_SGD(
+                        model,
+                        train_set,
+                        validation_set,
+                        lr=lr,
+                        n_epochs=n_epochs,
+                        sgd_lr_multiplier=lr_multiplier
+                    )
+
+                    # find the best validation loss
+                    min_val_loss = min(val_loss_history)
+                    print (f"min_val_loss = {min_val_loss:.5f}")
+
+                    # check if new combination is best
+                    if min_val_loss < best_loss:
+                        best_loss = min_val_loss
+                        best_params = {
+                            'lr': lr,
+                            'lr_multiplier': lr_multiplier,
+                            'hidden_dim': hidden_dim,
+                            'n_layers': n_layers
+                        }
+                        best_model = model
+
+    return best_model, best_params, best_loss
+
+
 train_x = np.load('train_mlp_x.npy') 
 train_y = np.load('train_mlp_y.npy')
 val_and_test_x  = np.load('test_mlp_x.npy')   
@@ -231,9 +286,9 @@ test_x  = z_normalize_images(test_x)
 
 #create training, val and test set by zipping 
 #corresponding inputs and targets
-training_set = zip(train_x, train_y)
-val_set = zip(val_x, val_y)
-test_set = zip(test_x, test_y)
+training_set = list(zip(train_x, train_y))
+val_set = list(zip(val_x, val_y))
+test_set = list(zip(test_x, test_y))
 
 #numpy printing instruction for decimal notation
 np.set_printoptions(
@@ -243,11 +298,26 @@ np.set_printoptions(
 )
 
 
-mlp = MLP()
+#mlp = MLP()
 
-SGD_LEARNING_RATE = 2e-3
-LEARNING_RATE_MULTIPLIER_PER_EPOCH = 0.95
+#SGD_LEARNING_RATE = 2e-3
+#LEARNING_RATE_MULTIPLIER_PER_EPOCH = 0.95
+# Define the hyperparameter grid
+hyperparameters_to_tune = {
+    'lr': [0.05, 0.01, 0.001],
+    'lr_multiplier': [0.9, 0.95, 0.99],
+    'hidden_dim': [32, 64, 128],
+    'n_layers': [4, 7, 10]
+    }
 N_EPOCHS = 10
+
+best_model, best_params, best_loss = grid_search(
+        hyperparameters_to_tune,
+        training_set,
+        val_set,
+        n_epochs=N_EPOCHS
+    )
+"""
 mlp, train_loss_history_SGD, val_loss_history_SGD = train_model_with_SGD (mlp,
                                             list(training_set),
                                             list(val_set),
@@ -255,6 +325,8 @@ mlp, train_loss_history_SGD, val_loss_history_SGD = train_model_with_SGD (mlp,
                                             N_EPOCHS,
                                             LEARNING_RATE_MULTIPLIER_PER_EPOCH
                                             )
-avg_test_loss = evaluate_model_on(mlp, list(test_set))
-print (f"TEST LOSS = {avg_test_loss:.5f}")
-print ("_" * 50)
+"""
+#avg_test_loss = evaluate_model_on(mlp, list(test_set))
+#print (f"TEST LOSS = {avg_test_loss:.5f}")
+#print ("_" * 50)
+
