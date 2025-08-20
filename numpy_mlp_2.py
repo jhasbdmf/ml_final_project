@@ -341,7 +341,4 @@ mlp, train_loss_history_SGD, val_loss_history_SGD = train_model_with_SGD (mlp,
                                             LEARNING_RATE_MULTIPLIER_PER_EPOCH
                                             )
 """
-#avg_test_loss = evaluate_model_on(mlp, list(test_set))
-#print (f"TEST LOSS = {avg_test_loss:.5f}")
-#print ("_" * 50)
 
