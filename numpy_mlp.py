@@ -87,7 +87,9 @@ class MLP ():
             
             #CEL is equal to -ln(exp(logits[target_value])/softmax_denom))
             #the formula below is algebraically equivalent to the one above
-            CEL_value = -logits[target_value] + np.log(softmax_denom)
+            #CEL_value = -logits[target_value] + np.log(softmax_denom)
+            # normalized logits for stable computation
+            CEL_value = -np.log(normalized_logits[target_value])
             
         #if no gradient is required,
         #then just return CEL
@@ -304,8 +306,8 @@ np.set_printoptions(
 #LEARNING_RATE_MULTIPLIER_PER_EPOCH = 0.95
 # Define the hyperparameter grid
 hyperparameters_to_tune = {
-    'lr': [0.05, 0.01, 0.001],
-    'lr_multiplier': [0.9, 0.95, 0.99],
+    'lr': [0.001, 0.0005, 0.0001],
+    'lr_multiplier': [0.99],
     'hidden_dim': [32, 64, 128],
     'n_layers': [4, 7, 10]
     }
@@ -317,6 +319,19 @@ best_model, best_params, best_loss = grid_search(
         val_set,
         n_epochs=N_EPOCHS
     )
+
+print("Best hyperparameters found:")
+print(f"Learning rate: {best_params['lr']}")
+print(f"LR multiplier: {best_params['lr_multiplier']}")
+print(f"Hidden dim: {best_params['hidden_dim']}")
+print(f"Number of layers: {best_params['n_layers']}")
+print(f"Best validation loss: {best_loss:.5f}")
+
+# Evaluate the best model on test set
+avg_test_loss = evaluate_model_on(best_model, test_set)
+print(f"TEST LOSS = {avg_test_loss:.5f}")
+print("_" * 50)
+
 """
 mlp, train_loss_history_SGD, val_loss_history_SGD = train_model_with_SGD (mlp,
                                             list(training_set),
